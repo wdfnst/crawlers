@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 from urlparse import urlparse
 import re
-#import urlparse
 
 class Util(object):
 
@@ -129,7 +128,7 @@ class Util(object):
 
 
 	def normalize_url(self, curl):
-		if curl == None or curl == "":
+		if not(curl):
 			return curl
 
 		# Converting the scheme and host to lower case
@@ -154,3 +153,19 @@ class Util(object):
 		# Removing the default port. The default port (port 80 for the “http” scheme) may be removed from (or added to) a URL. Example:
 		# http://www.example.com:80/bar.html → http://www.example.com/bar.html 
 
+#uu = Util()
+#print uu.get_domain("www.baidu.com")
+#print uu.get_domain("www.baidu.com.cn/asdf/asdf")
+#print uu.get_domain("ishare.iask.sina.com.cn")
+#print uu.get_domain("www1.baidu.com.cn")
+#print uu.get_domain("wwww.baasdfds.sdf.asdfasdf.asdfasdf.asdfasdf?a=b&b=c/asdfasdf.asp")
+#print uu.get_domain("http://wwww.google.sdf.asdfasdf.asdfasdf.asdfasdf?a=b&b=c/asdfasdf.asp")
+#print uu.get_domain("https://wwww.google.sdf.asdfasdf.asdfasdf.asdfasdf?a=b&b=c/asdfasdf.asp")
+#print uu.get_domain("https://wwww1.google.sdf.asdfasdf.asdfasdf.asdfasdf?a=b&b=c/asdfasdf.asp")
+#print uu.get_domain("https://wwwwa.google.sdf.asdfasdf.asdfasdf.asdfasdf?a=b&b=c/asdfasdf.asp")
+#print "-----------------"
+#print uu.standardize_url("http://www.baidu.com", "a.html")
+#print uu.standardize_url("http://www.baidu.com/b.html", "c.html")
+#print uu.standardize_url("http://www.baidu.com/a/b/c.html", "d.html")
+#print uu.standardize_url("http://www.baidu.com?a=1&b=2", "a.html")
+#print uu.standardize_url("http://www.baidu.com/a.html?a=1&b=2", "d.html")

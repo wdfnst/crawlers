@@ -3,23 +3,49 @@
 from redisoperation import RedisOperation
 from mysqloperation import DataSynch
 from util import Util
-from settings import Settings
+from blogsettings import Settings
 
 import sys, os, re, operator, datetime, time, signal, threading, gc, socket
 import hashlib, urlparse
-import urllib, cookielib
+import urllib
 import urllib2
 from urllib2 import Request
-import encodings.idna
 import lxml.html
+import psutil
+from DBUtils.PooledDB import PooledDB
+import MySQLdb as mdb
+import redis
 
+# Global settings
 reload(sys)
 sys.setdefaultencoding('utf-8')
-
 # timeout in seconds
 timeout = 180
 socket.setdefaulttimeout(timeout)
 
+# Get mysqldb/redis host configure info
+settings					= Settings()
+delete_level				= settings.blogcrawlersettings['init_level']
+mysql_host					= settings.mysqlsettings['host']
+mysql_port					= settings.mysqlsettings['port']
+mysql_user					= settings.mysqlsettings['user']
+mysql_passwd				= settings.mysqlsettings['passwd']
+mysql_db					= settings.mysqlsettings['db']
+mysql_charset				= settings.mysqlsettings['charset']
+redis_host				    = settings.redissettings['host']
+redis_port				    = settings.redissettings['port']
+redis_db				    = settings.redissettings['db']
+
+# Init the connections to mysqldb/redis
+pool = PooledDB( creator = mdb, mincached = 5, db = mysql_db, host = mysql_host, user = mysql_user, passwd= mysql_passwd, charset = "utf8", use_unicode = True)
+redis_pool = redis.ConnectionPool(host=redis_host, port=redis_port, db=int(redis_db))
+
+# Datastures stored in redis
+blog_page_url_set            = settings.blogcrawlersettings['page_url_set']
+blog_nothrow_urljson_list	 = settings.blogcrawlersettings['nothrow_urljson_list']
+ro							 = RedisOperation(redis_pool)
+
+# Definition of schedule process
 class Watcher:
 	def __init__(self):
 		settings = Settings()
@@ -28,13 +54,14 @@ class Watcher:
 		self.watch()
 
 	def watch(self):
+		schedule_pid = os.getpid()
 		counter = 0
 		try:
 			while True:
 				child = os.fork()
 				counter += 1
 				if child == 0:
-					return
+					runcrawler()
 				else:
 					self.children.append(child)
 					print "create child process: %d"%child
@@ -44,12 +71,12 @@ class Watcher:
 					for pid in self.children:
 						p_child = psutil.Process(pid)
 						memory_info = p_child.get_memory_info()
-						print str(pid) + " " + str(memory_info.rss)
-						if memory_info.rss > 125829120:    #120M 524288000 500M:
+						if memory_info.rss > 524288000:#  34M  35651584:    #120M 524288000 500M:
 							os.kill(pid, signal.SIGKILL)
 							counter -= 1
 							self.children.remove(pid)
-					time.sleep(3)
+					time.sleep(5)
+		except OSError: pass
 		except KeyboardInterrupt:
 			print '\n'
 			print 'KeyBoardInterrupt,begin to clear...'
@@ -64,73 +91,37 @@ class Watcher:
 				os.kill(pid, signal.SIGKILL)
 		except OSError: pass
 
+# Definition of BlogCrawler class
 class BlogCrawler(threading.Thread):
 
 	running   = True
-	settings  = Settings()
 
 	def __init__(self, threadname, thread_no):
 		threading.Thread.__init__(self,name=threadname)
 		signal.signal(signal.SIGINT, self.sigint_handle)
+		self.settings			  = settings
 		self.depth_limit          = self.settings.depth_limit
 		self.page_url_set         = self.settings.blogcrawlersettings["page_url_set"]
 		self.image_url_set        = self.settings.blogcrawlersettings["image_url_set"]
 		self.nothrow_urljson_list = self.settings.blogcrawlersettings["nothrow_urljson_list"]
 		self.delay_time           = 0.25
-		self.datasyn			  = DataSynch(thread_no)
-		self.ro					  = RedisOperation()
+		self.datasyn			  = DataSynch(pool, ro, thread_no)
+		self.ro					  = RedisOperation(redis_pool)
 		self.util				  = Util()
-				
-	#def __del__(self):
-		#pass
 
+	# Deprecated
 	def sigint_handle(self, signum, frame):
 		self.running = False
-		#self.logger.info("Catch SINGINT interrupt signal...")
 
+	# Deprecated
 	def init_delay_flag(self, domain_sh):
 		self.ro.set(domain_sh, 0)
 
-	def init_crawler(self):
-		reading = self.ro.get("reading_seeds")
-		if (reading is None or reading == 0) and self.ro.conn.llen(self.nothrow_urljson_list) <= 0:
-			self.ro.set("reading_seeds", 1)
-			init_level = 1
-		else:
-			init_level = 0
-			time.sleep(3)
-
-		#init_level = self.settings.blogcrawlersettings['init_level']
-		if init_level == 0:
-			pass
-		elif init_level == 1:
-			self.ro.conn.delete(self.page_url_set)
-			self.ro.conn.delete(self.image_url_set)
-			self.ro.conn.delete(self.nothrow_urljson_list)
-			self.datasyn.read_seeds(2)
-			self.ro.set("reading_seeds", 0)
-		elif init_level == 2:
-			self.ro.conn.delete(self.page_url_set)
-			self.ro.conn.delete(self.nothrow_urljson_list)
-			self.datasyn.read_seeds(2)
-		elif init_level == 3:
-			self.ro.conn.delete(self.page_url_set)
-			self.ro.conn.delete(self.image_url_set)
-			self.ro.conn.delete(self.nothrow_urljson_list)
-			self.datasyn.read_seeds(2)
-		elif init_level == 4:
-			self.ro.conn.delete(self.page_url_set)
-			self.ro.conn.delete(self.image_url_set)
-			self.ro.conn.delete(self.nothrow_urljson_list)
-			self.datasyn.read_seeds(2)
-		elif init_level == 5:
-			pass
-		elif init_level == 6:
-			pass
-
+	# Deprecated
 	def reset_delay_flag(self, domain_sh):
 		self.ro.set(domain_sh, 0)
 
+	# Deprecated
 	def wait_delay_ok(self, domain_sh):
 		while self.ro.get(domain_sh) == 1:
 			time.sleep(0.05)
@@ -142,19 +133,23 @@ class BlogCrawler(threading.Thread):
 		t = threading.Timer(self.delay_time, self.reset_delay_flag, [domain_sh])
 		t.start()
 
+	# Get a urljson from redis' queue(list)
 	def get_urljson(self, urljson_list):
 		# Wait for more urljson
-		wait_amount = 0
-		while self.ro.conn.llen(urljson_list) <= 0:
-			print "wait 3 secs"
-			time.sleep(3)
-			wait_amount += 1
-			if wait_amount > 3:
-				self.running = False
-				return None
+		try:
+			wait_amount = 0
+			while self.ro.conn.llen(urljson_list) <= 0:
+				print "wait 3 secs"
+				time.sleep(3)
+				wait_amount += 1
+				if wait_amount > 3:
+					self.running = False
+					return None
 
-		while self.ro.conn.llen(urljson_list) > 0:
-			return self.ro.rpop(urljson_list)
+			while self.ro.conn.llen(urljson_list) > 0:
+				return self.ro.rpop(urljson_list)
+		except:
+			pass
 
 	# Append url to nothrow url list or level url list
 	def appendnothrowurllist(self, urls, base_url, seed_url, seed_ext, seed_id, depth, page_type):
@@ -164,10 +159,13 @@ class BlogCrawler(threading.Thread):
 			if type(uu) == tuple or type(uu) == list:
 				urls.extend(uu)
 				continue
-			curl = urlparse.urljoin(base_url, uu)
+			if not(uu.startswith("http://")):
+				curl = urlparse.urljoin(base_url, uu)
+			else:
+				curl = uu
 			curl = self.util.normalize_url(curl)
 			import re
-			if curl is None or re.findall(r"#[0-9a-zA-Z]*$", curl):
+			if curl is None or re.findall(r"#[0-9a-zA-Z-_]*$", curl):
 				continue
 			# If crawler type is blog-crawler, then all urls must start with seed_url
 			if self. settings.crawlertype['crawlertype'] == 2 and (not curl.startswith(seed_url)) and (not curl.startswith(seed_ext)):
@@ -202,16 +200,24 @@ class BlogCrawler(threading.Thread):
 		url = urljson['url']
 		seed_url = self.ro.get(urljson['seed_id'])
 		try:
-			tree = lxml.html.parse(url)
+			r = Request(urljson['url'])
+			r.add_header('User-Agent', 'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)')
+			response = urllib2.urlopen(r)
+			content = response.read()
+			tree    = lxml.html.fromstring(content)
 			urls = tree.xpath("//a/@href")
 			self.appendnothrowurllist(urls, urljson['url'], seed_url, self.util.getcompleteurl(seed_url), urljson['seed_id'], urljson['depth'], urljson['pagetype'])
 			title = tree.xpath("//title/text()")
 			tagstxts = tree.xpath('//*[not(self::a | self::style | self::script | self::head | self::img | self::noscript | self::form | self::option)]/text()')
 		except:
 			return -1
+
 		text = ""
-		for tagtxt in tagstxts:
-			text += re.sub(r'\s', '', tagtxt)
+		try:
+			for tagtxt in tagstxts:
+				text += re.sub(r'\s', '', tagtxt)
+		except:
+			text = "no text"
 		match = self.settings.pattern.match(url)
 		if match == None:
 			isdetailed = 0
@@ -226,52 +232,30 @@ class BlogCrawler(threading.Thread):
 		blogpageitem['detailed']		  = isdetailed
 
 		blogpage_url_sh = hashlib.sha1(blogpageitem['blogurl']).hexdigest()
-		# Insert blogpageitem into msyql
 		blogpage_id = self.datasyn.insertblogpage_on_duplicate(blogpageitem)
 		if blogpage_id > 0:
 			self.datasyn.insertblogpageseedrelation_with_ignore(blogpage_id, urljson['seed_id'])
 			self.extract_blog_image(tree, urljson, blogpage_id)
 
-		#del tree
-		#del urls
-		#del title
-		#del tagstxts
-		#del blogpageitem
+		del tree
+		del urls
+		del title
+		del tagstxts
+		del blogpageitem
 
-	#def parse(self):
 	def run(self):
 		print "Thread - " + self.getName() + " started run"
-		#self.datasyn.read_seeds(2)
-		self.init_crawler()
-		gc_counter = 0
 		while self.running:
 			urljson   = self.get_urljson(self.nothrow_urljson_list)
 			if urljson is not None:
 				urljson  = eval(urljson)
 				self.parse_blog_page(urljson, urljson['url'])
-				#gc_counter += 1
-				#if gc_counter % 10 == 0:
-					#gc.collect()
 
 	def stop(self):
-		#self.thread_stop = True
 		pass
 
-def main(script, flag='with'):
-
-	ro = RedisOperation()
-	ro.cleardb()
-	time.sleep(3)
-	init_datasyn = DataSynch(100)
-	init_datasyn.read_seeds(2)
-	time.sleep(5)
-
-	if flag == 'with':
-		Watcher()
-	elif flag != 'without':
-		print 'unrecognized flag: ' + flag
-		sys.exit()
-
+# The main procedure
+def runcrawler():
 	scs = []
 	for i in range(36):
 		scs.append(BlogCrawler("T" + str(i), i))
@@ -281,6 +265,20 @@ def main(script, flag='with'):
 		scs[i].join()
 	for i in range(36):
 		scs[i].stop()
+
+def main(script, flag='with'):
+
+	ro.deletedb(blog_nothrow_urljson_list, blog_page_url_set, delete_level)
+	time.sleep(3)
+	init_datasyn = DataSynch(pool, ro, 100)
+	init_datasyn.read_seeds(2)
+	time.sleep(5)
+
+	if flag == 'with':
+		Watcher()
+	elif flag != 'without':
+		print 'unrecognized flag: ' + flag
+		sys.exit()
 
 if __name__ == '__main__':
 	main(*sys.argv)

@@ -29,19 +29,21 @@ class RedisOperation(object):
 	#redis_urlhash_db = 6
 	settings         = Settings()
 	
-	redis_host		 = settings.redissettings['host']
-	redis_port		 = settings.redissettings['port']
-	redis_db		 = settings.redissettings['db']
+	#redis_host		 = settings.redissettings['host']
+	#redis_port		 = settings.redissettings['port']
+	#redis_db		 = settings.redissettings['db']
 	# Constuctor
-	def __init__(self):
+	def __init__(self, pool):
 		# Get the start datetime
 		now = datetime.now()
 		nowstr = str(now.year) + str(now.month) + str(now.day) + str(now.hour)
 		# Start the log
 		log.start("redisoperation-" + nowstr + ".log")
 		# Init the ConnectionPool and Connection
-		self.pool = redis.ConnectionPool(host=self.redis_host, port=self.redis_port, db=int(self.redis_db))
+		self.pool = pool #redis.ConnectionPool(host=self.redis_host, port=self.redis_port, db=int(self.redis_db))
 		self.conn = redis.Redis(connection_pool = self.pool)
+		#self.urlhash_pool = redis.ConnectionPool(host=self.redis_host, port=self.redis_port, db=int(self.redis_urlhash_db))
+		#self.urlhash_conn = redis.Redis(connection_pool = self.urlhash_pool)
 
 	# Connection Factory: connection provider
 	def getconn(self):
@@ -175,4 +177,21 @@ class RedisOperation(object):
 				return 0
 		except Exception:
 			log.msg("flushdb error", level=log.ERROR)
+			return 0
+
+	# level-0 do nothing, level-1 delete the list not set, level-2 delete all elements includes list and set
+	def deletedb(self, listname, page_url_set, del_level):
+		try:
+			if del_level == 0:
+				pass
+			elif del_level == 1:
+				self.conn.delete(listname)
+			elif del_level == 2:
+				self.conn.delete(listname, page_url_set)
+			elif del_level == 3:
+				self.cleardb()
+			else:
+				pass
+		except Exception:
+			log.msg("delete with level error", level=log.ERROR)
 			return 0

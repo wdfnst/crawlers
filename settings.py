@@ -6,7 +6,7 @@ class Settings(object):
 
 	mysqlsettings   = {'host':'localhost', 'port':3306, 'user':'fashion', 'passwd':'lmsi3229fashion', 'db':'fashion4_ads_test_1', 'charset':'utf8'}
 
-	redissettings   = {'host':'localhost', 'port':6379, 'db':0}
+	redissettings   = {'host':'localhost', 'port':6379, 'db':1}
 
 	crawlername     = ['BlogCrawler', 'ProductCrawler']
 	"""
@@ -29,11 +29,11 @@ class Settings(object):
 				6 do nothing, and go directly
 	"""
 	blogcrawlersettings    = {'page_url_set':'blog_page_url_set', 'nothrow_urljson_list':'blog_nothrow_urljson_list', 'image_url_set':'blog_image_url_set', \
-								'seeds_set':'blog_seeds_set', 'process_no':20, 'thread_no':12, 'init_level':1}
+								'seeds_set':'blog_seeds_set', 'process_no':20, 'thread_no':12, 'init_level':0}
 	productcrawlersettings = {'page_url_set':'product_page_url_set', 'nothrow_urljson_list':'product_nothrow_urljson_list', 'image_url_set':'product_image_url_set', \
-								'seeds_set':'product_seeds_set', 'process_no':10, 'thread_no':12, 'init_level':1}
+								'seeds_set':'product_seeds_set', 'process_no':10, 'thread_no':12, 'init_level':0}
 	formcrawlersettings    = {'page_url_set':'form_page_url_set', 'nothrow_urljson_list':'form_nothrow_urljson_list', 'image_url_set':'form_image_url_set', \
-								'seeds_set':'form_seeds_set', 'process_no':25, 'thread_no':12, 'init_level':1}
+								'seeds_set':'form_seeds_set', 'process_no':25, 'thread_no':12, 'init_level':0}
 	
 	crawlersettings        = [blogcrawlersettings, productcrawlersettings]
 
