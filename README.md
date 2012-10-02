@@ -77,7 +77,7 @@ Shown in attached document [5]
 [1] Redis installing and configuring guide
 https://docs.google.com/file/d/0B79kk8CpytwrRmVILXZxODdBcGM/edit§ 
 [2] How to configure your robust xpath
-http://www.w3schools.com/xpath/xpath_syntax.asp§
-[3] 
+http://www.w3schools.com/xpath/xpath_syntax.asp
+§[3] 
 [4] 
 [5] 
