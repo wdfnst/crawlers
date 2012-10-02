@@ -177,7 +177,7 @@ class DataSynch(object):
 			item['pagetext'] = (item['pagetext']).replace(self.punctuations_to_erase[c], ' ')
 		
 		item['title']		= (item['title']).replace("'", "\\'")
-		item['title']		= (item['title']).replace('"', '\ "')
+		item['title']		= (item['title']).replace('"', '\\"')
 		item['producturl']	= (item['producturl']).replace("'", "\\'")
 		item['producturl']	= (item['producturl']).replace('"', '\\"')
 
