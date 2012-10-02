@@ -39,19 +39,19 @@ The following items in ***settings.py represents:
 
     c.) blogcrawlersettings:
 
-    page_url_set: A set that cache all the webpage urls' hash(url).
+        page_url_set: A set that cache all the webpage urls' hash(url).
 
-    nothrow_urljson_list: A queue cache the json of 
+        nothrow_urljson_list: A queue cache the json of 
 
-    {'url': 'http://', 'pagetype': 2L, 'depth': 5, 'seed_id': 632L}
+        {'url': 'http://', 'pagetype': 2L, 'depth': 5, 'seed_id': 632L}
 
-  image_url_set: A set cache all the image urls' hash(url).
+        image_url_set: A set cache all the image urls' hash(url).
 
-  process_no: Define the number of the process to start initially.
+        process_no: Define the number of the process to start initially.
 
-    thread_no: Define the number of the threads in each process.
-
-  init_level: Define the crawler's initialization level when starts, 0 means do nothing, 1 means deleting all the list and preserve all the set, 2 means deleting all the list and page_url_set , all the list and page_url_set, 3 means deleting all the lists and sets. 
+        thread_no: Define the number of the threads in each process.
+        
+        init_level: Define the crawler's initialization level when starts, 0 means do nothing, 1 means deleting all the list and preserve all the set, 2 means deleting all the list and page_url_set , all the list and page_url_set, 3 means deleting all the lists and sets. 
 
     d.) foldersettings: Setting the folder to store the images, before setting the folder, you should confirm this folder containing all the sub-folders which sequentially generated from 000 to fff(a tri-Alphanumeric sequence)
 
