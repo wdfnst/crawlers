@@ -88,6 +88,10 @@ class Util(object):
 	def tuplelist2list(self, tl):
 		newlist = []
 
+		if type(tl) is not tuple and type(tl) is not list:
+			newlist.append(tl)
+			return newlist
+
 		if len(tl) <= 0:
 			return newlist
 		for el in tl:
@@ -105,7 +109,7 @@ class Util(object):
 	def convt2compurl(self, base_url, urls):
 		import re
 		import urlparse
-		if type(urls) == tuple or type(urls) == list:
+		if type(urls) is tuple or type(urls) is list:
 			newurllist = []
 			for url in urls:
 				url = re.sub(r'^\s+', '', url)

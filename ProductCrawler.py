@@ -12,6 +12,7 @@ from urllib2 import Request
 import encodings.idna
 
 import lxml.html
+import psutil
 import MySQLdb as mdb
 from DBUtils.PooledDB import PooledDB
 import redis
@@ -153,7 +154,7 @@ class ProductCrawler(threading.Thread):
 			return self.ro.rpop(urljson_list)
 
 	# Append url to nothrow url list or level url list
-	def appendnothrowurllist(self, urls, base_url, seed_url, seed_ext, seed_id, depth, page_type, category):
+	def appendnothrowurllist(self, urls, base_url, seed_url, seed_ext, seed_id, depth, page_type, category, category_1):
 		urllist = []
 		if type(urls) is not list:
 			urllist.append(urls)
@@ -175,7 +176,7 @@ class ProductCrawler(threading.Thread):
 								 or ('.tiff' in curl) or ('.pcx' in curl) or ('.tga' in curl) or ('facebook.com' in curl) or \
 								 ('google.com' in curl) or ('twitter.com' in curl) or ('google.com' in curl)):
 				page_url_sh = hashlib.sha1(curl).hexdigest()
-				urljson = {'url': curl, 'seed_id': seed_id, 'depth':depth + 1, 'pagetype':page_type, 'category':category}
+				urljson = {'url': curl, 'seed_id': seed_id, 'depth':depth + 1, 'pagetype':page_type, 'category':category, 'category_1':category_1}
 				re = self.ro.check_lpush(self.url_set, page_url_sh, self.nothrow_urljson_list, urljson)
 
 	# Extract urls from page-detail
@@ -201,11 +202,11 @@ class ProductCrawler(threading.Thread):
 		print "list page url num:", len(restr6)
 
 		seed_url = self.ro.get(urljson['seed_id'])
-		self.appendnothrowurllist(urls, urljson['url'], seed_url, self.util.getcompleteurl(seed_url), urljson['seed_id'], urljson['depth'], 31, urljson['category'])
-		self.appendnothrowurllist(restr6, urljson['url'], seed_url, self.util.getcompleteurl(seed_url), urljson['seed_id'], urljson['depth'], 3, urljson['category'])
+		self.appendnothrowurllist(urls, urljson['url'], seed_url, self.util.getcompleteurl(seed_url), urljson['seed_id'], urljson['depth'], 31, urljson['category'], urljson['category_1'])
+		self.appendnothrowurllist(restr6, urljson['url'], seed_url, self.util.getcompleteurl(seed_url), urljson['seed_id'], urljson['depth'], 3, urljson['category'], urljson['category_1'])
 		
 	# Extract product detail page info
-	def parse_product_detailpage(self, url, seed_id, depth, category, urljson):
+	def parse_product_detailpage(self, url, seed_id, depth, category, category_1, urljson):
 		response_url = url
 		try:
 			content = urllib.urlopen(url).read()
@@ -250,12 +251,13 @@ class ProductCrawler(threading.Thread):
 		productpageitem['crawlerseedurl_id'] = seed_id
 	
 		print urljson
-		print "------- ", str(restr9)
+		print "------- ", str(restr17)
 
 		# Check proudct page is existed: insert or update
 		if restr17:
 			productpageitem['mainimageid'] = 0
 			productpageitem['category']    = category
+			productpageitem['category_1']  = category_1
 			page_re = self.datasyn.insertproductpage_on_duplicate(productpageitem)
 			if page_re > 0:
 				img_re = self.datasyn.insertimage_on_duplicate(productpageitem['mainimageurl'], response_url, page_re)
@@ -271,7 +273,7 @@ class ProductCrawler(threading.Thread):
 				if urljson['pagetype'] == 3:
 					self.parse_product_listpage(urljson)
 				elif urljson['pagetype'] == 31:
-					self.parse_product_detailpage(urljson['url'], urljson['seed_id'], urljson['depth'], urljson['category'], urljson)
+					self.parse_product_detailpage(urljson['url'], urljson['seed_id'], urljson['depth'], urljson['category'], urljson['category_1'], urljson)
 
 	def stop(self):
 		pass

@@ -15,32 +15,40 @@
 #   5.sadd(self, userset, uservalue)
 #   .....
 ###############################################
-import re
+#import urllib2
+#import hashlib
+#import time
+#from urlparse import urlparse
+#import ImageFile
+
+#from PIL import Image
+#import glob, os, socket, sys, re
+#from datetime import datetime, date
+#import logging
+#import simplejson
+#import json
+
+#import MySQLdb as mdb
+#from DBUtils.PooledDB import PooledDB
+#import redis
+
+#from redisoperation import RedisOperation
+#from settings import Settings
+
+import time, re, glob, os, sys, socket
+from datetime import datetime, date
+import ImageFile
+from PIL import Image
+import logging, logging.handlers
+from urlparse import urlparse
+import urllib2, hashlib
+import simplejson
+import MySQLdb as mdb
 import redis
 
 from redisoperation import RedisOperation
-
-import chardet
-import urllib2
-import httplib
-import hashlib
-import time
-from urlparse import urlparse
-import ImageFile
-
 from settings import Settings
-from scrapy import log
-
-from PIL import Image
-import glob, os, socket
-from datetime import datetime, date
-import logging
-import simplejson
-import json
-
-import MySQLdb as mdb
-from DBUtils.PooledDB import PooledDB
-import sys
+from util import Util
 
 # Timeout in seconds
 timeout = 180
@@ -61,7 +69,7 @@ class DataSynch(object):
 	
 	# Special characters which needed to be replace by blackspace in title, text etc.
 	punctuations_to_erase = ['`', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', \
-							'+', '-', '=', '{', '[', '}', ']', '|', ':', ';', '\'', '"', '<', ',', '>', '.', '/', '$', '\\', '•']
+							'+', '-', '=', '{', '[', '}', ']', '|', ':', ';', '\'', '"', '<', ',', '>', '.', '/', '$', '\\', '•', '"', "'"]
 
 	# Get mysqldb/redis host info
 	settings					= Settings()
@@ -103,7 +111,7 @@ class DataSynch(object):
 	def read_seeds(self, seed_type):
 		try:
 			if seed_type == 3:
-				self.cur.execute("select url, id, SELLER_URL, CATEGORY, TITLE_XPATH, DETAILURL_XPATH, DETAILURLHEADER, NEXTPAGE_XPATH, NEXTPAGEHEADER, IMAGESOURCE, IMAGEURL_XPATH, IMAGEURLHEADER, BRAND_XPATH, DESCRIPTION_XPATH, PRODUCTID_XPATH, COLOR_XPATH, PRICE_XPATH, SIZE_XPATH, MAINIMAGEURL_XPATH, CATEGORY from crawlerseedurl where photosourcetype_id=3 and deleted=0 and webkit=0")
+				self.cur.execute("select url, id, SELLER_URL, CATEGORY, TITLE_XPATH, DETAILURL_XPATH, DETAILURLHEADER, NEXTPAGE_XPATH, NEXTPAGEHEADER, IMAGESOURCE, IMAGEURL_XPATH, IMAGEURLHEADER, BRAND_XPATH, DESCRIPTION_XPATH, PRODUCTID_XPATH, COLOR_XPATH, PRICE_XPATH, SIZE_XPATH, MAINIMAGEURL_XPATH, CATEGORY_1 from crawlerseedurl where photosourcetype_id=3 and deleted=0 and webkit=0")
 				rows = self.cur.fetchall()
 				print "len(product seeds):" + str(len(rows))
 				for row in rows:
@@ -127,7 +135,7 @@ class DataSynch(object):
 					if row[0] != None and row[0] != "" and row[1] != None and row[1] != "":
 						seed_url = re.sub(r'\s', '', row[0])
 						self.ro.set(row[1], seed_url)
-						urljson = {'url': row[0], 'seed_id': row[1], 'depth':1, 'pagetype':3, 'category':row[19]}
+						urljson = {'url': row[0], 'seed_id': row[1], 'depth':1, 'pagetype':3, 'category':row[3], 'category_1':row[19]}
 						print urljson
 						self.ro.check_lpush(self.product_page_url_set, hashlib.sha1(seed_url).hexdigest(), self.product_nothrow_urljson_list, urljson)
 		except mdb.Error, e:
@@ -144,10 +152,10 @@ class DataSynch(object):
 
 		# Note: the photourlhash is calcuted before the '/" was escaped
 		photourlhash = hashlib.sha1(itemsrc).hexdigest()
-		itemsrc = itemsrc.replace("'", "\\'")
-		itemsrc = itemsrc.replace('"', '\\"')
-		sourcepage_url = sourcepage_url.replace("'", "\\'")
-		sourcepage_url = sourcepage_url.replace('"', '\\"')
+		itemsrc = itemsrc.replace("'", "\\\'")
+		itemsrc = itemsrc.replace('"', '\\\"')
+		sourcepage_url = sourcepage_url.replace("'", "\\\'")
+		sourcepage_url = sourcepage_url.replace('"', '\\\"')
 
 		sql = ""
 		try:
@@ -176,13 +184,13 @@ class DataSynch(object):
 			item['size']     = (item['size']).replace(self.punctuations_to_erase[c], ' ')
 			item['pagetext'] = (item['pagetext']).replace(self.punctuations_to_erase[c], ' ')
 		
-		item['title']		= (item['title']).replace("'", "\\'")
-		item['title']		= (item['title']).replace('"', '\\"')
-		item['producturl']	= (item['producturl']).replace("'", "\\'")
-		item['producturl']	= (item['producturl']).replace('"', '\\"')
+		item['title']		= (item['title']).replace("'", "\\\'")
+		item['title']		= (item['title']).replace('"', '\\\"')
+		item['producturl']	= (item['producturl']).replace("'", "\\\'")
+		item['producturl']	= (item['producturl']).replace('"', '\\\"')
 
 		try:
-			sql = "insert into productphotoinfo(title, brand, description, price, color, size, producturl, imageamount, productid, mainimage_id, category, pageurlhash, dateinsert) values('%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s', '%s', '%s', '%s', now()) on duplicate key update title=values(title), daterefresh=now()"%(item['title'], item['brand'], item['desc'], item['price'], item['color'], item['size'], item['producturl'], int(item['imageamount']), item['productid'], item['mainimageid'], item['category'], pageurl_sh)
+			sql = "insert into productphotoinfo(title, brand, description, price, color, size, producturl, imageamount, productid, mainimage_id, category, category_1, pageurlhash, dateinsert) values('%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s', '%s', '%s', '%s', '%s', now()) on duplicate key update title=values(title), daterefresh=now()"%(item['title'], item['brand'], item['desc'], item['price'], item['color'], item['size'], item['producturl'], int(item['imageamount']), item['productid'], item['mainimageid'], item['category'], item['category_1'], pageurl_sh)
 			re = self.cur.execute(sql)
 			self.mysql_conn.commit()
 			if re >= 1:
