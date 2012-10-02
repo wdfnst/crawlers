@@ -28,19 +28,20 @@ Note: Usually don't try to change any parameter once it's configured well. If yo
 Note: Usually don't try to change any parameter once it's configured well.
 ### 3.)BlogCrawler configure:
 The following items in ***settings.py represents:
-a.) mysqlsettings: host, port, user, passwd, db and charset are required.
 
-  Note: utf8 shall be a good choice for charset
+    a.) mysqlsettings: host, port, user, passwd, db and charset are required.
 
-b.) redissettings: host, port and db are required
+    Note: utf8 shall be a good choice for charset
 
-  Note: setting db to be a separated number between crawlers is required, and a nonzero between 1 to 16 is recommended for db 0 is a default db that may lead to incorrect operation.
+    b.) redissettings: host, port and db are required
 
-c.) blogcrawlersettings:
+    Note: setting db to be a separated number between crawlers is required, and a nonzero between 1 to 16 is recommended for db 0 is a default db that may lead to incorrect operation.
 
-  page_url_set: A set that cache all the webpage urls' hash(url).
+    c.) blogcrawlersettings:
 
-  nothrow_urljson_list: A queue cache the json of 
+    page_url_set: A set that cache all the webpage urls' hash(url).
+
+    nothrow_urljson_list: A queue cache the json of 
 
     {'url': 'http://', 'pagetype': 2L, 'depth': 5, 'seed_id': 632L}
 
@@ -48,19 +49,16 @@ c.) blogcrawlersettings:
 
   process_no: Define the number of the process to start initially.
 
-  thread_no: Define the number of the threads in each process.
+    thread_no: Define the number of the threads in each process.
 
-  init_level: Define the crawler's initialization level when starts, 0 means do 
+  init_level: Define the crawler's initialization level when starts, 0 means do nothing, 1 means deleting all the list and preserve all the set, 2 means deleting all the list and page_url_set , all the list and page_url_set, 3 means deleting all the lists and sets. 
 
-  nothing, 1 means deleting all the list and preserve all the set, 2 means 
-  deleting all the list and page_url_set , all the list and page_url_set, 3   
-  means deleting all the lists and sets. 
-d.) foldersettings: Setting the folder to store the images, before setting the folder, you should confirm this folder containing all the sub-folders which sequentially generated from 000 to fff(a tri-Alphanumeric sequence)
+    d.) foldersettings: Setting the folder to store the images, before setting the folder, you should confirm this folder containing all the sub-folders which sequentially generated from 000 to fff(a tri-Alphanumeric sequence)
 
-e.) crawlertype: This parameter is same with photosourcetype_id in mysql's table crawlerseedurl, it means the photos' source, 2 presents coming from blog, 3 presents coming from product websites.
+    e.) crawlertype: This parameter is same with photosourcetype_id in mysql's table crawlerseedurl, it means the photos' source, 2 presents coming from blog, 3 presents coming from product websites.
 
-f.) depth_limit: To limit the crawler's depth.
-Note: Usually don't try to change any parameter once it's configured well.
+    f.) depth_limit: To limit the crawler's depth.
+    Note: Usually don't try to change any parameter once it's configured well.
 
 ### 4.)Additional configures for product crawler:
 For product crawler is desiged to crawl designated elements in pages, so in all the product seeds which marked by photosourcetype_id=3 in mysql table crawlerseedurl should contain the xpath corresponding to target element. The following sql should be executed after getting the xpath.
