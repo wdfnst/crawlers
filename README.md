@@ -50,14 +50,14 @@ Note: Usually don't try to change any parameter once it's configured well.
 
 ### 4.)Additional configures for product crawler:
 For product crawler is desiged to crawl designated elements in pages, so in all the product seeds which marked by photosourcetype_id=3 in mysql table crawlerseedurl should contain the xpath corresponding to target element. The following sql should be executed after getting the xpath.
-update crawlerseedurl set photosourcetype_id=3 where url like "%your url%";
-update crawlerseedurl  set detailurl_xpath="your xpath", nextpage_xpath="your xpath" where url like "%your url%";
-update crawlerseedurl set TITLE_XPATH="", IMAGEURL_XPATH="", BRAND_XPATH="", DESCRIPTION_XPATH="", PRODUCTID_XPATH="", COLOR_XPATH="", PRICE_XPATH="", SIZE_XPATH="", MAINIMAGEURL_XPATH="" where url like "%your url%";
+    >> update crawlerseedurl set photosourcetype_id=3 where url like "%your url%";
+    >> update crawlerseedurl  set detailurl_xpath="your xpath", nextpage_xpath="your xpath" where url like "%your url%";
+    >>update crawlerseedurl set TITLE_XPATH="", IMAGEURL_XPATH="", BRAND_XPATH="", DESCRIPTION_XPATH="", PRODUCTID_XPATH="", COLOR_XPATH="", PRICE_XPATH="", SIZE_XPATH="", MAINIMAGEURL_XPATH="" where url like "%your url%";
 Note: How to configure your robust xpath, you may need to reference document 		[2]
 ## 3. How to run the instance of the crawler
 In the workstation(137.132.145.238), you could type the following command to start a crawler instance after configuring:
 
->> nohup python2 BlogCrawler.py > output.file &
+    >> nohup python2 BlogCrawler.py > output.file &
 
 Note: python2 means python2.6 for there are multiple python versioins installed in workstation. So if on your own machine, you just need to start the crawler intances by typing: python BlogCrawler.py after intalling and configuring. 
 ## 4. How to inspect the status of redis
