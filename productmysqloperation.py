@@ -111,7 +111,7 @@ class DataSynch(object):
 	def read_seeds(self, seed_type):
 		try:
 			if seed_type == 3:
-				self.cur.execute("select url, id, SELLER_URL, CATEGORY, TITLE_XPATH, DETAILURL_XPATH, DETAILURLHEADER, NEXTPAGE_XPATH, NEXTPAGEHEADER, IMAGESOURCE, IMAGEURL_XPATH, IMAGEURLHEADER, BRAND_XPATH, DESCRIPTION_XPATH, PRODUCTID_XPATH, COLOR_XPATH, PRICE_XPATH, SIZE_XPATH, MAINIMAGEURL_XPATH, CATEGORY_1 from crawlerseedurl where photosourcetype_id=3 and deleted=0 and webkit=0")
+				self.cur.execute("select url, id, SELLER_URL, CATEGORY, TITLE_XPATH, DETAILURL_XPATH, DETAILURLHEADER, NEXTPAGE_XPATH, NEXTPAGEHEADER, IMAGESOURCE, IMAGEURL_XPATH, IMAGEURLHEADER, BRAND_XPATH, DESCRIPTION_XPATH, PRODUCTID_XPATH, COLOR_XPATH, PRICE_XPATH, SIZE_XPATH, MAINIMAGEURL_XPATH, CATEGORY_1 from seed where photosourcetype_id=3 and deleted=0 and webkit=0 limit 5")
 				rows = self.cur.fetchall()
 				print "len(product seeds):" + str(len(rows))
 				for row in rows:
@@ -137,6 +137,7 @@ class DataSynch(object):
 						self.ro.set(row[1], seed_url)
 						urljson = {'url': row[0], 'seed_id': row[1], 'depth':1, 'pagetype':3, 'category':row[3], 'category_1':row[19]}
 						print urljson
+#						self.ro.lpush(self.product_nothrow_urljson_list, urljson) 
 						self.ro.check_lpush(self.product_page_url_set, hashlib.sha1(seed_url).hexdigest(), self.product_nothrow_urljson_list, urljson)
 		except mdb.Error, e:
 			self.logger.error("Error %d:%s"%(e.args[0], e.args[1]))
@@ -159,7 +160,7 @@ class DataSynch(object):
 
 		sql = ""
 		try:
-			sql = "insert ignore into photo(datepost, photosourcetype_id, photourl,  pageurl, photourlhash, photoinfo_id) value(now(), 3, '%s', '%s', '%s', %d) on duplicate key update datepost=now()"%(itemsrc , sourcepage_url, photourlhash, page_id)
+			sql = "insert ignore into photocache(datepost, photosourcetype_id, photourl,  pageurl, photourlhash) value(now(), 3, '%s', '%s', '%s') on duplicate key update datepost=now()"%(itemsrc , sourcepage_url, photourlhash)
 			re = self.cur.execute(sql)
 			self.logger.info("Image insert re:%s"%(re))
 			return self.cur.lastrowid
@@ -170,7 +171,7 @@ class DataSynch(object):
 			self.logger.error("mysql insert image with download error, table: photocache, errormsg:%s - sql:%s"%(e, sql))
 			return 0
 
-	# Synchronize blog pge info
+	# synchronize product
 	def insertproductpage_on_duplicate(self, item):
 		pageurl_sh      = hashlib.sha1(item['producturl']).hexdigest()
 		mainimageurl_sh = hashlib.sha1(item['mainimageurl']).hexdigest()
@@ -184,13 +185,13 @@ class DataSynch(object):
 			item['size']     = (item['size']).replace(self.punctuations_to_erase[c], ' ')
 			item['pagetext'] = (item['pagetext']).replace(self.punctuations_to_erase[c], ' ')
 		
-		item['title']		= (item['title']).replace("'", "\\\'")
-		item['title']		= (item['title']).replace('"', '\\\"')
-		item['producturl']	= (item['producturl']).replace("'", "\\\'")
-		item['producturl']	= (item['producturl']).replace('"', '\\\"')
+		item['title']		= (item['title']).replace("'", "\\'")
+		item['title']		= (item['title']).replace('"', '\ "')
+		item['producturl']	= (item['producturl']).replace("'", "\\'")
+		item['producturl']	= (item['producturl']).replace('"', '\\"')
 
 		try:
-			sql = "insert into productphotoinfo(title, brand, description, price, color, size, producturl, imageamount, productid, mainimage_id, category, category_1, pageurlhash, dateinsert) values('%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s', '%s', '%s', '%s', '%s', now()) on duplicate key update title=values(title), daterefresh=now()"%(item['title'], item['brand'], item['desc'], item['price'], item['color'], item['size'], item['producturl'], int(item['imageamount']), item['productid'], item['mainimageid'], item['category'], item['category_1'], pageurl_sh)
+			sql = "insert into productpage(title, brand, description, price, color, size, pageurl, imageamount, productid, pagetext, pageurlhash, dateinsert) values('%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s','%s', '%s', now()) on duplicate key update title=values(title), pagetext=values(pagetext), daterefresh=now()"%(item['title'], item['brand'], item['desc'], item['price'], item['color'], item['size'], item['producturl'], int(item['imageamount']), item['productid'], item['pagetext'], pageurl_sh)
 			re = self.cur.execute(sql)
 			self.mysql_conn.commit()
 			if re >= 1:
@@ -201,4 +202,22 @@ class DataSynch(object):
 			return 0
 		except Exception, e:
 			self.logger.error("mysql insert productpage page error, table: productpage, errormsg:%s"%(e))
+			return 0
+
+	# Insert blogpage photo relation by pageurlhash and photourlhash
+	def insert_relationship_with_id(self, tablename, field, page_id, image_id):		
+		#print "get into insert relation function"
+		try:	
+			relationsql = "insert ignore into %s(page_id, %s) values(%d, %d)"%(tablename, field, page_id, image_id)
+			re = self.cur.execute(relationsql)
+			#self.mysql_conn.commit()
+			#print "insert relation re:%d"%re
+			self.logger.info("Relationship insert re:%d, %s"%(re, relationsql))
+			#self.mysql_conn.commit()
+			return re
+		except mdb.Error, e:
+			self.logger.error("mysql insert relation error, table: %s, errormsg:%d - %s"%(tablename, e.args[0], e.args[1]))
+			return 0
+		except Exception, e:
+			self.logger.error("insert relation error:%s - %s"%(e, relationsql))
 			return 0

@@ -177,6 +177,8 @@ class ProductCrawler(threading.Thread):
 								 ('google.com' in curl) or ('twitter.com' in curl) or ('google.com' in curl)):
 				page_url_sh = hashlib.sha1(curl).hexdigest()
 				urljson = {'url': curl, 'seed_id': seed_id, 'depth':depth + 1, 'pagetype':page_type, 'category':category, 'category_1':category_1}
+				if page_type == 3:
+					print "listpageurl==> ",curl
 				re = self.ro.check_lpush(self.url_set, page_url_sh, self.nothrow_urljson_list, urljson)
 
 	# Extract urls from page-detail
@@ -211,6 +213,8 @@ class ProductCrawler(threading.Thread):
 		try:
 			content = urllib.urlopen(url).read()
 			tree    = lxml.html.fromstring(content)
+			#fi = open("tmp/" + hashlib.sha1(urljson['url']).hexdigest(), 'w')
+			#fi.write(content)
 		except:
 			return -1
 		productpageitem = {}
@@ -225,6 +229,9 @@ class ProductCrawler(threading.Thread):
 		restr15 = tree.xpath(self.ro.get(str(seed_id) + "_" + "PRICE_XPATH"))
 		restr16 = tree.xpath(self.ro.get(str(seed_id) + "_" + "SIZE_XPATH"))
 		restr17 = tree.xpath(self.ro.get(str(seed_id) + "_" + "MAINIMAGEURL_XPATH"))
+
+		#print "------- title: ", str(restr3)
+		#print "------- price: ", str(restr15)
 
 		restr9  = self.util.tuplelist2list(restr9)
 		restr17 = self.util.tuplelist2list(restr17)
@@ -242,7 +249,7 @@ class ProductCrawler(threading.Thread):
 		productpageitem['size']				 = "".join(self.util.tuplelist2list(restr16))
 		productpageitem['mainimageurl']		 = "".join(restr17)
 		try:
-			productpageitem['pagetext']			 = "".join(tree.xpath('//*[not(self::a | self::style | self::script | self::head | self::img | \
+			productpageitem['pagetext']	     = "".join(tree.xpath('//*[not(self::a | self::style | self::script | self::head | self::img | \
 																		self::noscript | self::form | self::option)]/text()'))
 		except:
 			productpageitem['pagetext']      = 'no desc'
@@ -250,7 +257,7 @@ class ProductCrawler(threading.Thread):
 		productpageitem['producturl']		 = response_url
 		productpageitem['crawlerseedurl_id'] = seed_id
 	
-		print urljson
+		#print urljson
 		print "------- ", str(restr17)
 
 		# Check proudct page is existed: insert or update
@@ -260,7 +267,10 @@ class ProductCrawler(threading.Thread):
 			productpageitem['category_1']  = category_1
 			page_re = self.datasyn.insertproductpage_on_duplicate(productpageitem)
 			if page_re > 0:
+				self.datasyn.insert_relationship_with_id('productpageseedrelation', "seed_id", page_re, seed_id)
 				img_re = self.datasyn.insertimage_on_duplicate(productpageitem['mainimageurl'], response_url, page_re)
+				if img_re > 0:
+					self.datasyn.insert_relationship_with_id("productphotopagerelation", "photo_id", page_re, img_re)
 		elif restr3 and restr15:
 			self.ro.lpush(self.nothrow_urljson_list, urljson)
 
