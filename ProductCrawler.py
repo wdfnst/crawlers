@@ -177,8 +177,6 @@ class ProductCrawler(threading.Thread):
 								 ('google.com' in curl) or ('twitter.com' in curl) or ('google.com' in curl)):
 				page_url_sh = hashlib.sha1(curl).hexdigest()
 				urljson = {'url': curl, 'seed_id': seed_id, 'depth':depth + 1, 'pagetype':page_type, 'category':category, 'category_1':category_1}
-				if page_type == 3:
-					print "listpageurl==> ",curl
 				re = self.ro.check_lpush(self.url_set, page_url_sh, self.nothrow_urljson_list, urljson)
 
 	# Extract urls from page-detail

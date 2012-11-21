@@ -111,7 +111,7 @@ class DataSynch(object):
 	def read_seeds(self, seed_type):
 		try:
 			if seed_type == 3:
-				self.cur.execute("select url, id, SELLER_URL, CATEGORY, TITLE_XPATH, DETAILURL_XPATH, DETAILURLHEADER, NEXTPAGE_XPATH, NEXTPAGEHEADER, IMAGESOURCE, IMAGEURL_XPATH, IMAGEURLHEADER, BRAND_XPATH, DESCRIPTION_XPATH, PRODUCTID_XPATH, COLOR_XPATH, PRICE_XPATH, SIZE_XPATH, MAINIMAGEURL_XPATH, CATEGORY_1 from seed where photosourcetype_id=3 and deleted=0 and webkit=0 limit 5")
+				self.cur.execute("select url, id, SELLER_URL, CATEGORY, TITLE_XPATH, DETAILURL_XPATH, DETAILURLHEADER, NEXTPAGE_XPATH, NEXTPAGEHEADER, IMAGESOURCE, IMAGEURL_XPATH, IMAGEURLHEADER, BRAND_XPATH, DESCRIPTION_XPATH, PRODUCTID_XPATH, COLOR_XPATH, PRICE_XPATH, SIZE_XPATH, MAINIMAGEURL_XPATH, CATEGORY_1 from seed where photosourcetype_id=3 and deleted=0 and webkit=0")
 				rows = self.cur.fetchall()
 				print "len(product seeds):" + str(len(rows))
 				for row in rows:
