@@ -90,7 +90,7 @@ class DataSynch(object):
 			#return 1
 		try:
 			if seed_type == 2:
-				self.cur.execute("select id, url, webkit, photosourcetype_id from crawlerseedurl where deleted=0 and photosourcetype_id=%d"%(seed_type))
+				self.cur.execute("select id, url, webkit, photosourcetype_id from seed where deleted=0 and photosourcetype_id=%d"%(seed_type))
 				seeds = self.cur.fetchall()
 				print "len(seeds):" + str(len(seeds))
 				for seed in seeds:
@@ -100,7 +100,7 @@ class DataSynch(object):
 					self.ro.check_lpush(self.blog_page_url_set, hashlib.sha1(seed[1]).hexdigest(), self.blog_nothrow_urljson_list, urljson)
 					self.init_delay_flag(hashlib.sha1(self.util.get_domain(seed[1])).hexdigest())
 			elif seed_type == 3:
-				self.cur.execute("select url, id, SELLER_URL, CATEGORY, TITLE_XPATH, DETAILURL_XPATH, DETAILURLHEADER, NEXTPAGE_XPATH, NEXTPAGEHEADER, IMAGESOURCE, IMAGEURL_XPATH, IMAGEURLHEADER, BRAND_XPATH, DESCRIPTION_XPATH, PRODUCTID_XPATH, COLOR_XPATH, PRICE_XPATH, SIZE_XPATH, MAINIMAGEURL_XPATH from crawlerseedurl where photosourcetype_id=3 and deleted=0 and webkit=0")
+				self.cur.execute("select url, id, SELLER_URL, CATEGORY, TITLE_XPATH, DETAILURL_XPATH, DETAILURLHEADER, NEXTPAGE_XPATH, NEXTPAGEHEADER, IMAGESOURCE, IMAGEURL_XPATH, IMAGEURLHEADER, BRAND_XPATH, DESCRIPTION_XPATH, PRODUCTID_XPATH, COLOR_XPATH, PRICE_XPATH, SIZE_XPATH, MAINIMAGEURL_XPATH from seed where photosourcetype_id=3 and deleted=0 and webkit=0")
 				rows = self.cur.fetchall()
 				print "len(product seeds):" + str(len(rows))
 				for row in rows:

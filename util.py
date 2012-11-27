@@ -30,10 +30,10 @@ class Util(object):
 			return raw_url
 		import urlparse
 		url = urlparse.urljoin(base_url, raw_url)
-		if url.startswith("http://www") or url.startswith("wwww") or url.startswith("https://www"):
-			pass
-		else:
-			url = url.replace("//", "//www", 1)
+		#if url.startswith("http://www") or url.startswith("wwww") or url.startswith("https://www"):
+			#pass
+		#else:
+			#url = url.replace("//", "//www.", 1)
 		return url
 	
 	def concat_image_url(self, base_url, raw_url):
@@ -41,17 +41,17 @@ class Util(object):
 			return raw_url
 		import urlparse
 		url = urlparse.urljoin(base_url, raw_url)
-		if url.startswith("http://www") or url.startswith("wwww") or url.startswith("https://www"):
-			pass
-		else:
-			url = url.replace("//", "//www", 1)
+		#if url.startswith("http://www") or url.startswith("wwww") or url.startswith("https://www"):
+			#pass
+		#else:
+			#url = url.replace("//", "//www.", 1)
 		return url
 
 	def getcompleteurl(self, incompleteurl):
 		if incompleteurl.startswith("http://www") or incompleteurl.startswith("wwww") or incompleteurl.startswith("https://www"):
 			return incompleteurl
 		else:
-			return incompleteurl.replace("//", "//www", 1)
+			return incompleteurl.replace("//", "//www.", 1)
 
 	# Get urls from strings
 	def get_url_from_strings(self, strs):

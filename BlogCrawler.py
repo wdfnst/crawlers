@@ -4,8 +4,9 @@ from redisoperation import RedisOperation
 from mysqloperation import DataSynch
 from util import Util
 from blogsettings import Settings
+from date_extractor import date_extractor
 
-import sys, os, re, operator, datetime, time, signal, threading, gc, socket
+import sys, os, re, operator, datetime, time, signal, threading, gc, socket, math
 import hashlib, urlparse
 import urllib
 import urllib2
@@ -95,6 +96,7 @@ class Watcher:
 class BlogCrawler(threading.Thread):
 
 	running   = True
+	datetime_container = {}
 
 	def __init__(self, threadname, thread_no):
 		threading.Thread.__init__(self,name=threadname)
@@ -179,6 +181,59 @@ class BlogCrawler(threading.Thread):
 				urljson = {'url': curl, 'seed_id': seed_id, 'depth':depth + 1, 'pagetype':page_type}
 				re = self.ro.check_lpush(self.page_url_set, page_url_sh, self.nothrow_urljson_list, urljson)
 
+	'''-------------------------The following three functions were added for datetime--------------------------------------'''
+	def extract_datetime(self, tree):
+		self.datetime_container = {}
+		self.datetime_container[-1] = "" #datetime.datetime.now().date().isoformat()
+		de = date_extractor()
+		i = 0
+		ae = tree.xpath("//*[not(self::script or self::head or self::noscript or self::option)]")		
+		for e in ae:
+			i += 1
+			if e.xpath("./ancestor::*[contains(@class, 'comment') or contains(@class, 'feedback') or contains(@id, 'comment') or contains(@id,'feedback')]"):
+				continue
+			try:
+				txt = e.xpath("text()")
+			except:
+				continue
+			text = "".join(txt)
+			if text:
+				dd = de.ExtractDate(text)
+				if dd:
+					self.datetime_container[i] = dd
+					#print str(i) + " : " + str(dd)
+
+	def get_nearest_datetime(self, nodeno):
+		re = -1
+		if self.datetime_container:
+			min = 10000000
+			for de in self.datetime_container:
+				if abs(nodeno - de) < min:
+					re = de
+		return self.datetime_container[re]
+
+	def extract_blog_image_fordate(self, tree, urljson, blogpage_id):
+		#print "==>" + "extract_blog_image_fordate"
+		i = 0
+		elements = tree.xpath("//*")
+		for element in elements:
+			imgitem = {}
+			if element.xpath('name()') == 'img' and element.xpath('@src') is not None and len(element.xpath('@src')) > 0:
+				imgitem['src']          = self.util.concat_image_url(urljson['url'], element.xpath('@src')[0])
+				imgitem['desc']         = self.util.get_start_one(element.xpath('@alt'))
+				imgitem['postdate']     = self.get_nearest_datetime(i)
+				#print "++++++++" + str(imgitem['postdate'])
+				imgitem['sourcetypeid'] = 2
+				# Insert this image
+				image_url_sh = hashlib.sha1(imgitem['src']).hexdigest()
+				if self.ro.sadd(self.image_url_set, image_url_sh) > 0:
+					image_id = self.datasyn.insert_image_with_download(imgitem, 1)
+					if image_id > 0:
+						self.datasyn.insert_blogpage_photo_relationship_with_id(blogpage_id, image_id)
+			del imgitem
+			i += 1
+	'''--------------------------------------------------------------------------------------------------------------------'''
+
 	def extract_blog_image(self, tree, urljson, blogpage_id):
 		elements = tree.xpath("//img")
 		for element in elements:
@@ -189,6 +244,7 @@ class BlogCrawler(threading.Thread):
 				imgitem['postdate']     = datetime.datetime.now().date().isoformat()
 				imgitem['sourcetypeid'] = 2
 				# Insert this image
+				#print imgitem
 				image_url_sh = hashlib.sha1(imgitem['src']).hexdigest()
 				if self.ro.sadd(self.image_url_set, image_url_sh) > 0:
 					image_id = self.datasyn.insert_image_with_download(imgitem, 1)
@@ -200,16 +256,21 @@ class BlogCrawler(threading.Thread):
 		url = urljson['url']
 		seed_url = self.ro.get(urljson['seed_id'])
 		try:
+			#print urljson['url']
 			r = Request(urljson['url'])
 			r.add_header('User-Agent', 'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)')
 			response = urllib2.urlopen(r)
 			content = response.read()
 			tree    = lxml.html.fromstring(content)
+			self.extract_datetime(tree)
+			#print str(self.datetime_container)
 			urls = tree.xpath("//a/@href")
-			self.appendnothrowurllist(urls, urljson['url'], seed_url, self.util.getcompleteurl(seed_url), urljson['seed_id'], urljson['depth'], urljson['pagetype'])
+			#self.appendnothrowurllist(urls, urljson['url'], seed_url, self.util.getcompleteurl(seed_url), urljson['seed_id'], urljson['depth'], urljson['pagetype'])
+			self.appendnothrowurllist(urls, urljson['url'], seed_url, seed_url, urljson['seed_id'], urljson['depth'], urljson['pagetype'])
 			title = tree.xpath("//title/text()")
 			tagstxts = tree.xpath('//*[not(self::a | self::style | self::script | self::head | self::img | self::noscript | self::form | self::option)]/text()')
-		except:
+		except Exception, e:
+			#print "Exception: " + str(e)
 			return -1
 
 		text = ""
@@ -220,9 +281,9 @@ class BlogCrawler(threading.Thread):
 			text = "no text"
 		match = self.settings.pattern.match(url)
 		if match == None:
-			isdetailed = 0
-		else:
 			isdetailed = 1
+		else:
+			isdetailed = 0
 
 		blogpageitem = {}
 		blogpageitem['title']			  = self.util.get_start_one(title)
@@ -235,7 +296,7 @@ class BlogCrawler(threading.Thread):
 		blogpage_id = self.datasyn.insertblogpage_on_duplicate(blogpageitem)
 		if blogpage_id > 0:
 			self.datasyn.insertblogpageseedrelation_with_ignore(blogpage_id, urljson['seed_id'])
-			self.extract_blog_image(tree, urljson, blogpage_id)
+			self.extract_blog_image_fordate(tree, urljson, blogpage_id)
 
 		del tree
 		del urls
@@ -282,3 +343,17 @@ def main(script, flag='with'):
 
 if __name__ == '__main__':
 	main(*sys.argv)
+
+#init_datasyn = DataSynch(pool, ro, 100)
+#init_datasyn.read_seeds(2)
+#time.sleep(5)
+
+#scs = []
+#for i in range(1):
+	#scs.append(BlogCrawler("T" + str(i), i))
+#for i in range(1):
+	#scs[i].start()
+#for i in range(1):
+	#scs[i].join()
+#for i in range(1):
+	#scs[i].stop()

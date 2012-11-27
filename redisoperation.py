@@ -14,7 +14,7 @@
 #	.....
 ###############################################
 from  datetime import datetime, date, time
-#from settings import Settings
+from settings import Settings
 import redis
 import logging
 
@@ -30,7 +30,7 @@ logger.setLevel(logging.INFO)
 
 class RedisOperation(object):
 	# Get the settings from the setting file
-	#settings         = Settings()
+	settings         = Settings()
 	
 	def __init__(self, pool):
 		# Get the start datetime
